@@ -1,10 +1,12 @@
 <?php
 /*
-Plugin Name: PW Advanced Woo Reporting
-Plugin URI: http://proword.net/Plugins/Advanced_Reporting/
-Description: WooCommerce Advance Reporting plugin is a comprehensive and the most complete reporting system.
-Version: 7.0
-Author: Proword
+Plugin Name: PW Advanced Woo Reporting (LBC Fork)
+Plugin URI: https://github.com/ginozzzz/lbc-pw-advanced-woo-reporting
+GitHub Plugin URI: ginozzzz/lbc-pw-advanced-woo-reporting
+GitHub Branch: main
+Description: WooCommerce Advance Reporting plugin is a comprehensive and the most complete reporting system. LBC Fork with custom features.
+Version: 7.0.1
+Author: Proword (LBC Fork by Gino Filippelli)
 Author URI: http://proword.net/
 Text Domain: pw_report_wcreport_textdomain
 Domain Path: /languages/
@@ -12,6 +14,11 @@ Domain Path: /languages/
 
 
 /*
+v7.0.1 (LBC Fork)
+    Added: User role filter to Customer Report
+    Added: Ability to exclude specific user roles
+    Added: Billing company column to Customer Report
+
 v7.0
     Compatible: With PHP 8.0
     Compatible: WordPress 5.9
@@ -393,11 +400,10 @@ if ( ! class_exists('pw_report_wcreport_class')) {
             define('__PW_BRAND_THUMB__', $brand_thumb);
 
             ////ADDED IN VER4.0
-            /// AUTO UPDATE
+            /// AUTO UPDATE — disabled in LBC fork; replaced by PUC GitHub updater (see bottom of file)
             $this->plugin_slug = basename(dirname(__FILE__));
-            add_filter('pre_set_site_transient_update_plugins', array($this, 'pw_report_check_for_plugin_update'));
-            // Take over the Plugin info screen
-            add_filter('plugins_api', array($this, 'pw_report_plugin_api_call'), 10, 3);
+            // add_filter('pre_set_site_transient_update_plugins', array($this, 'pw_report_check_for_plugin_update'));
+            // add_filter('plugins_api', array($this, 'pw_report_plugin_api_call'), 10, 3);
 
         }
 
@@ -410,6 +416,24 @@ if ( ! class_exists('pw_report_wcreport_class')) {
             if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date)) {
                 return '%d-%m-%Y';
             }
+
+            // "March 11, 2025" — WordPress F j, Y
+            if (preg_match('/^[A-Za-z]+ \d{1,2}, \d{4}$/', $date)) {
+                return '%M %e, %Y';
+            }
+
+            // "11/03/2025" — d/m/Y
+            if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
+                return '%d/%m/%Y';
+            }
+
+            // "03/11/2025" — m/d/Y
+            if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
+                return '%m/%d/%Y';
+            }
+
+            // Fallback: let MySQL try Y-m-d
+            return '%Y-%m-%d';
         }
 
         function pw_report_check_for_plugin_update($checked_data)
@@ -4154,7 +4178,7 @@ where pitems.order_id='$order_id' AND pmeta.meta_key='_wc_eco_fields_value' AND 
             }
         }
 
-        function pw_intelligence_product_images($title = 'No Title', $id, $url = false)
+        function pw_intelligence_product_images($id, $title = 'No Title', $url = false)
         {
             $first_letter = strtolower($title[0]);
 
@@ -4386,6 +4410,22 @@ where pitems.order_id='$order_id' AND pmeta.meta_key='_wc_eco_fields_value' AND 
 
         return $variations;
 
+    }
+
+    // -------------------------------------------------------------------------
+    // GitHub auto-updater via Plugin Update Checker v5
+    // Publishes WP dashboard update notifications directly from GitHub releases.
+    // To trigger an update: create a GitHub Release with a higher version tag
+    // than the Version: field in the plugin header.
+    // -------------------------------------------------------------------------
+    if ( file_exists( __DIR__ . '/lib/plugin-update-checker/load-v5p4.php' ) ) {
+        require_once __DIR__ . '/lib/plugin-update-checker/load-v5p4.php';
+        $pw_update_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+            'https://github.com/ginozzzz/lbc-pw-advanced-woo-reporting/',
+            __FILE__,
+            'PW-Advanced-Woocommerce-Reporting-System'
+        );
+        $pw_update_checker->setBranch('main');
     }
 
 }

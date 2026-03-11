@@ -13,6 +13,10 @@ if($file_used=="sql_table")
     $pw_order_status		= $this->pw_get_woo_requests('pw_orders_status','-1',true);
     $pw_order_status  		= "'".str_replace(",","','",$pw_order_status)."'";
 
+    //User Role Filter
+    $pw_user_roles			= $this->pw_get_woo_requests('pw_user_roles',NULL,true);
+    $pw_user_roles_exclude	= $this->pw_get_woo_requests('pw_user_roles_exclude',NULL,true);
+
     ///////////HIDDEN FIELDS////////////
     $pw_hide_os		= $this->pw_get_woo_requests('pw_hide_os','-1',true);
     $pw_publish_order='no';
@@ -49,7 +53,8 @@ if($file_used=="sql_table")
 		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta2 ON pw_postmeta2.post_id=pw_posts.ID
 		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta3 ON pw_postmeta3.post_id=pw_posts.ID
 		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta5 ON pw_postmeta5.post_id=pw_posts.ID
-		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta4 ON pw_postmeta4.post_id=pw_posts.ID";
+		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta4 ON pw_postmeta4.post_id=pw_posts.ID
+		LEFT JOIN  {$wpdb->prefix}usermeta as usermeta_role ON usermeta_role.user_id = pw_postmeta4.meta_value AND usermeta_role.meta_key = '{$wpdb->prefix}capabilities'";
 
     if(strlen($pw_id_order_status)>0 && $pw_id_order_status != "-1" && $pw_id_order_status != "no" && $pw_id_order_status != "all"){
         $pw_id_order_status_join= "
@@ -64,6 +69,24 @@ if($file_used=="sql_table")
 		AND pw_postmeta5.meta_key='_billing_company'
 		AND pw_postmeta4.meta_key='_customer_user'
 		";
+
+	//User Role Include Filter (supports comma-separated multiple roles)
+	if($pw_user_roles!=NULL && $pw_user_roles!='-1' && $pw_user_roles!=''){
+		$include_roles = array_filter(array_map('trim', explode(',', $pw_user_roles)));
+		if(!empty($include_roles)){
+			$include_parts = array_map(function($r){ return "usermeta_role.meta_value LIKE '%\"" . esc_sql($r) . "\"%'"; }, $include_roles);
+			$sql_condition .= " AND (" . implode(' OR ', $include_parts) . ")";
+		}
+	}
+
+	//User Role Exclude Filter (supports comma-separated multiple roles)
+	if($pw_user_roles_exclude!=NULL && $pw_user_roles_exclude!='-1' && $pw_user_roles_exclude!=''){
+		$exclude_roles = array_filter(array_map('trim', explode(',', $pw_user_roles_exclude)));
+		if(!empty($exclude_roles)){
+			$exclude_parts = array_map(function($r){ return "usermeta_role.meta_value NOT LIKE '%\"" . esc_sql($r) . "\"%'"; }, $exclude_roles);
+			$sql_condition .= " AND (" . implode(' AND ', $exclude_parts) . " OR usermeta_role.meta_value IS NULL)";
+		}
+	}
 
     if(strlen($pw_id_order_status)>0 && $pw_id_order_status != "-1" && $pw_id_order_status != "no" && $pw_id_order_status != "all"){
         $pw_id_order_status_condition = " AND  term_taxonomy.term_id IN ({$pw_id_order_status})";
@@ -183,6 +206,28 @@ if($file_used=="sql_table")
 
             <div class="col-md-6">
                 <div class="awr-form-title">
+                    <?php _e('Quick Select Date Range',__PW_REPORT_WCREPORT_TEXTDOMAIN__);?>
+                </div>
+                <select id="pw_date_preset" class="pw_date_preset">
+                    <option value="custom"><?php _e('Custom Date Range',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="last7days"><?php _e('Last 7 Days',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="last30days"><?php _e('Last 30 Days',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="last90days"><?php _e('Last 90 Days',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="thismonth"><?php _e('This Month',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="lastmonth"><?php _e('Last Month',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="thisquarter"><?php _e('This Quarter',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="lastquarter"><?php _e('Last Quarter',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="ytd"><?php _e('Year to Date',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="last12months"><?php _e('Last 12 Months',__PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                </select>
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <div class="col-md-6">
+                <div class="awr-form-title">
                     <?php _e('From Date',__PW_REPORT_WCREPORT_TEXTDOMAIN__);?>
                 </div>
                 <span class="awr-form-icon"><i class="fa fa-calendar"></i></span>
@@ -198,6 +243,28 @@ if($file_used=="sql_table")
 
                 <input type="hidden" name="pw_id_order_status[]" id="pw_id_order_status" value="-1">
                 <input type="hidden" name="pw_orders_status[]" id="order_status" value="<?php echo $this->pw_shop_status; ?>">
+            </div>
+
+        </div>
+
+        <div class="row">
+
+            <div class="col-md-6">
+                <div class="awr-form-title">
+                    <?php _e('Include User Role',__PW_REPORT_WCREPORT_TEXTDOMAIN__);?>
+                </div>
+                <select name="pw_user_roles[]" class="pw_user_roles" multiple="multiple">
+                    <?php wp_dropdown_roles(); ?>
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <div class="awr-form-title">
+                    <?php _e('Exclude User Role',__PW_REPORT_WCREPORT_TEXTDOMAIN__);?>
+                </div>
+                <select name="pw_user_roles_exclude[]" class="pw_user_roles_exclude" multiple="multiple">
+                    <?php wp_dropdown_roles(); ?>
+                </select>
             </div>
 
         </div>
@@ -225,6 +292,88 @@ if($file_used=="sql_table")
         </div>
 
     </form>
+    <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Initialize Select2 for role dropdowns
+            $('select.pw_user_roles').select2({
+                placeholder: '<?php _e('Select roles to include (leave empty for all)', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?>',
+                allowClear: true,
+                width: '100%',
+                closeOnSelect: false
+            });
+            
+            $('select.pw_user_roles_exclude').select2({
+                placeholder: '<?php _e('Select roles to exclude (leave empty for none)', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?>',
+                allowClear: true,
+                width: '100%',
+                closeOnSelect: false
+            });
+
+            // Date preset functionality
+            function setDateRange(fromDate, toDate) {
+                $('#pwr_from_date').datepicker('setDate', fromDate);
+                $('#pwr_to_date').datepicker('setDate', toDate);
+            }
+
+            $('#pw_date_preset').on('change', function() {
+                var preset = $(this).val();
+                var today = new Date();
+                var fromDate, toDate;
+
+                switch(preset) {
+                    case 'last7days':
+                        toDate = new Date();
+                        fromDate = new Date(today.setDate(today.getDate() - 7));
+                        break;
+                    case 'last30days':
+                        toDate = new Date();
+                        fromDate = new Date(today.setDate(today.getDate() - 30));
+                        break;
+                    case 'last90days':
+                        toDate = new Date();
+                        fromDate = new Date(today.setDate(today.getDate() - 90));
+                        break;
+                    case 'thismonth':
+                        fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                        toDate = new Date();
+                        break;
+                    case 'lastmonth':
+                        fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                        break;
+                    case 'thisquarter':
+                        var quarter = Math.floor(today.getMonth() / 3);
+                        fromDate = new Date(today.getFullYear(), quarter * 3, 1);
+                        toDate = new Date();
+                        break;
+                    case 'lastquarter':
+                        var quarter = Math.floor(today.getMonth() / 3);
+                        if (quarter === 0) {
+                            fromDate = new Date(today.getFullYear() - 1, 9, 1);
+                            toDate = new Date(today.getFullYear() - 1, 11, 31);
+                        } else {
+                            fromDate = new Date(today.getFullYear(), (quarter - 1) * 3, 1);
+                            toDate = new Date(today.getFullYear(), quarter * 3, 0);
+                        }
+                        break;
+                    case 'ytd':
+                        fromDate = new Date(today.getFullYear(), 0, 1);
+                        toDate = new Date();
+                        break;
+                    case 'last12months':
+                        toDate = new Date();
+                        fromDate = new Date(today.setFullYear(today.getFullYear() - 1));
+                        break;
+                    case 'custom':
+                        return;
+                }
+
+                if (fromDate && toDate) {
+                    setDateRange(fromDate, toDate);
+                }
+            });
+        });
+    </script>
     <?php
 }
 

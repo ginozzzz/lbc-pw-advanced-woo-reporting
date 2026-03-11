@@ -2,3 +2,5 @@
 *.log
 wp-config.php
 *.bak
+puc.zip
+plugin-update-checker-5.4/

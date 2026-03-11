@@ -63,6 +63,8 @@
     font-size: 15px;
     margin: -1px 0 0 -1px;
     color: #505050;
+    padding-top: 8px;
+    padding-right: 5px;
 }
 
 .pw-topbar-wrapper a:active,
@@ -985,7 +987,6 @@ a.dt-button:focus:not(.disabled){
 .dataTables_length select,
 .awr-box-content select,
 .awr-request-form select{
-    padding: 0px 0 0 35px;
     line-height: 31px;
     height: 33px;
     vertical-align: middle;
@@ -1959,6 +1960,7 @@ tr.first th {
 .awr-selcol .dropdown-menu input[type=checkbox]{
     border-color: #E1E7EC;
     margin-right: 5px;
+    padding-top: 8px !important;
 }
 
 /*Search Form*/
@@ -1984,12 +1986,11 @@ tr.first th {
     width:22px;
     text-align:center;
     z-index:99;
-    line-height: 6px;
+    line-height: 20px !important;
 }
 .search_form_report  input[type=text],
 .awr-box-content input[type=text],
 .awr-request-form input[type=text]{
-    height: 33px;
     padding: 8px 10px 8px 35px;
     border-color: rgba(34, 36, 38, 0.15);
     box-shadow: none;
@@ -2005,7 +2006,6 @@ tr.first th {
 .search_form_report  input[type=email],
 .awr-box-content input[type=email],
 .awr-request-form input[type=email]{
-    height: 33px;
     padding: 8px 10px 8px 35px;
     border-color: rgba(34, 36, 38, 0.15);
     box-shadow: none;
@@ -2034,7 +2034,6 @@ tr.first th {
     display: inline-block;
 }
 .search_form_report select{
-    height: 33px;
     padding: 7px 7px 7px 30px!important;
     border-radius: 0;
     box-shadow: none;

@@ -4,6 +4,7 @@
 		class pw_rpt_datatable_generate{
 
 			public $results;
+			public $constants = array();
 			//GET LAST x DAYS FOR DETECT RANK of ITEMS
 			public $sql_int_last_x_days;
 			public $sql_int_last_todays;
@@ -3537,9 +3538,9 @@
 			//PUBLIC FUCTIONS
 			function pw_get_prod_sku($order_item_id, $pw_product_id/*,$current_page='',$product_type='-1'*/){
 				$pw_table_value = $this->pw_get_oiv_sku($order_item_id);
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : $this->pw_get_op_sku($pw_product_id);
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : $this->pw_get_op_sku($pw_product_id);
 
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : 'Not Set';
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : 'Not Set';
 				return $pw_table_value;
 			}
 
@@ -3564,23 +3565,19 @@
 
                 $pw_table_value = $this->pw_get_oiv_customfields($order_item_id);
 
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : 'Not Set';
-				return $pw_table_value;
-			}
-
-            function pw_get_product_sku($pw_product_id){
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : 'Not Set';
 
 				$pw_table_value = $this->pw_get_op_sku($pw_product_id);
 
 
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : 'Not Set';
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : 'Not Set';
 				return $pw_table_value;
 			}
 
 			function pw_get_prod_stock_($order_item_id, $pw_product_id){
 				$pw_table_value = $this->pw_get_oiv_stock($order_item_id);
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : $this->pw_op_stock($pw_product_id);
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : 'Not Set';
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : $this->pw_op_stock($pw_product_id);
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : 'Not Set';
 				return $pw_table_value;
 			}
 
@@ -3631,9 +3628,9 @@
 			function pw_get_prod_custom_fields($order_item_id, $pw_product_id,$field/*,$current_page='',$product_type='-1'*/){
 
 				$pw_table_value = $this->pw_get_oiv_custom_fields($order_item_id,$field);
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : $this->pw_get_op_custom_fields($pw_product_id,$field);
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : $this->pw_get_op_custom_fields($pw_product_id,$field);
 
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : 'Not Set';
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : 'Not Set';
 				return $pw_table_value;
 			}
 
@@ -3680,9 +3677,9 @@
 			function pw_get_prod_custom_fields_2($order_item_id, $pw_product_id,$field/*,$current_page='',$product_type='-1'*/){
 
 				$pw_table_value = $this->pw_get_oiv_custom_fields_2($order_item_id,$field);
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : $this->pw_get_op_custom_fields_2($pw_product_id,$field);
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : $this->pw_get_op_custom_fields_2($pw_product_id,$field);
 
-				$pw_table_value = strlen($pw_table_value) > 0 ? $pw_table_value : 'Not Set';
+				$pw_table_value = !empty($pw_table_value) ? $pw_table_value : 'Not Set';
 				return $pw_table_value;
 			}
 

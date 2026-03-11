@@ -51,7 +51,11 @@ if ($file_used == "sql_table") {
     $pw_order_status   = $this->pw_get_woo_requests('pw_orders_status', '-1', true);
     //$pw_order_status  		= "'".str_replace(",","','",$pw_order_status)."'";
 
-    $pw_paid_customer = str_replace(",", "','", $pw_paid_customer);
+    // User Role Filter
+    $pw_user_roles         = $this->pw_get_woo_requests('pw_user_roles', NULL, true);
+    $pw_user_roles_exclude = $this->pw_get_woo_requests('pw_user_roles_exclude', NULL, true);
+
+    $pw_paid_customer = str_replace(",", "','", $pw_paid_customer ?? '');
     //$pw_country_code		= str_replace(",","','",$pw_country_code);
     //$state_code		= str_replace(",","','",$state_code);
     //$pw_country_code		= str_replace(",","','",$pw_country_code);
@@ -511,6 +515,18 @@ if ($file_used == "sql_table") {
         $date_delivery_condition .= " AND pw_delivery.meta_key='_delivery_date' ";
     }
 
+    // User Role Filter JOINs (conditional - only when a role filter is active)
+    $pw_user_roles_join      = '';
+    $pw_user_roles_condition = '';
+    if (($pw_user_roles != NULL && $pw_user_roles != '' && $pw_user_roles != '-1') ||
+        ($pw_user_roles_exclude != NULL && $pw_user_roles_exclude != '' && $pw_user_roles_exclude != '-1')) {
+        $pw_user_roles_join = " LEFT JOIN {$wpdb->prefix}postmeta as pw_postmeta_customer_user"
+            . " ON pw_postmeta_customer_user.post_id = pw_woocommerce_order_items.order_id"
+            . " LEFT JOIN {$wpdb->prefix}usermeta as usermeta_role"
+            . " ON usermeta_role.user_id = pw_postmeta_customer_user.meta_value"
+            . " AND usermeta_role.meta_key = '{$wpdb->prefix}capabilities'";
+    }
+
     $post_type_condition = "pw_posts.post_type = 'shop_order' AND billing_country.meta_key	= '_billing_country' ";
     $post_type_condition = "";
 
@@ -699,6 +715,24 @@ if ($file_used == "sql_table") {
         $pw_hide_os_condition = " AND pw_posts.post_status NOT IN ('" . $pw_hide_os . "')";
     }
 
+    // User Role Include/Exclude Conditions
+    if ($pw_user_roles_join !== '') {
+        $pw_user_roles_condition = " AND pw_postmeta_customer_user.meta_key = '_customer_user'";
+        if ($pw_user_roles != NULL && $pw_user_roles != '-1' && $pw_user_roles != '') {
+            $include_roles = array_filter(array_map('trim', explode(',', $pw_user_roles)));
+            if (!empty($include_roles)) {
+                $include_parts = array_map(function($r){ return "usermeta_role.meta_value LIKE '%\"" . esc_sql($r) . "\"%'"; }, $include_roles);
+                $pw_user_roles_condition .= " AND (" . implode(' OR ', $include_parts) . ")";
+            }
+        }
+        if ($pw_user_roles_exclude != NULL && $pw_user_roles_exclude != '-1' && $pw_user_roles_exclude != '') {
+            $exclude_roles = array_filter(array_map('trim', explode(',', $pw_user_roles_exclude)));
+            if (!empty($exclude_roles)) {
+                $exclude_parts = array_map(function($r){ return "usermeta_role.meta_value NOT LIKE '%\"" . esc_sql($r) . "\"%'"; }, $exclude_roles);
+                $pw_user_roles_condition .= " AND (" . implode(' AND ', $exclude_parts) . " OR usermeta_role.meta_value IS NULL)";
+            }
+        }
+    }
 
     $sql = "SELECT $sql_columns FROM $sql_joins";
 
@@ -706,8 +740,7 @@ if ($file_used == "sql_table") {
 				$pw_country_code_join $state_code_join $pw_payment_method_join $pw_billing_post_code_join
 				$pw_coupon_used_join $pw_variation_id_join $pw_variation_only_join $pw_variations_formated_join
 				$pw_order_meta_key_join $pw_coupon_codes_join $pw_variation_item_meta_key_join $pw_show_cog_join
-				$delivery_date_join";
-
+			$delivery_date_join $pw_user_roles_join";
     $sql .= " Where $other_condition_1 $post_type_condition $pw_txt_email_condition_1 $pw_txt_first_name_condition_1
 						 $pw_country_code_condition_1 $state_code_condition_1
 						$pw_billing_post_code_condition $pw_payment_method_condition_1 $date_condition
@@ -719,8 +752,7 @@ if ($file_used == "sql_table") {
 						$pw_coupon_used_condition $pw_coupon_code_condition $pw_coupon_codes_condition $pw_variation_item_meta_key_condition
 						$pw_variation_id_condition $pw_variation_only_condition $pw_variations_formated_condition $pw_show_cog_condition
 						$pw_order_status_condition $pw_hide_os_condition
-						$date_delivery_condition";
-
+					$date_delivery_condition $pw_user_roles_condition";
     $sql_group_by = " GROUP BY pw_woocommerce_order_items.order_item_id ";
     $sql_order_by = " ORDER BY {$pw_sort_by} {$pw_order_by}";
 
@@ -1240,7 +1272,7 @@ if ($file_used == "sql_table") {
                 $display_class  = '';
                 $country        = $this->pw_get_woo_countries();
 
-                $this_country = $order->billing_country;
+                $this_country = $order->get_billing_country();
                 if($this_country == '') $this_country = $default_country;
 
                 $pw_table_value = isset($country->countries[$this_country]) ? $country->countries[$this_country] : $this_country;
@@ -2559,7 +2591,7 @@ if ($file_used == "sql_table") {
             $display_class  = '';
             $country        = $this->pw_get_woo_countries();
 
-            $this_country = $order->billing_country;
+            $this_country = $order->get_billing_country();
             if($this_country == '') $this_country = $default_country;
 
             $pw_table_value = isset($country->countries[$this_country]) ? $country->countries[$this_country] : $this_country;
@@ -3025,6 +3057,26 @@ if ($file_used == "sql_table") {
     ?>
     <form class='alldetails search_form_report' action='' method='post'>
         <input type='hidden' name='action' value='submit-form'/>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="awr-form-title">
+                    <?php _e('Quick Select Date Range', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?>
+                </div>
+                <select id="pw_date_preset" class="pw_date_preset">
+                    <option value="custom"><?php _e('Custom Date Range', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="last7days"><?php _e('Last 7 Days', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="last30days"><?php _e('Last 30 Days', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="last90days"><?php _e('Last 90 Days', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="thismonth"><?php _e('This Month', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="lastmonth"><?php _e('Last Month', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="thisquarter"><?php _e('This Quarter', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="lastquarter"><?php _e('Last Quarter', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="ytd"><?php _e('Year to Date', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                    <option value="last12months"><?php _e('Last 12 Months', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?></option>
+                </select>
+            </div>
+        </div>
 
         <div class="col-md-6">
             <div class="awr-form-title">
@@ -3792,6 +3844,25 @@ if ($file_used == "sql_table") {
 
             ?>
 
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="awr-form-title">
+                        <?php _e('Include User Role', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?>
+                    </div>
+                    <select name="pw_user_roles[]" class="pw_user_roles" multiple="multiple">
+                        <?php wp_dropdown_roles(); ?>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <div class="awr-form-title">
+                        <?php _e('Exclude User Role', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?>
+                    </div>
+                    <select name="pw_user_roles_exclude[]" class="pw_user_roles_exclude" multiple="multiple">
+                        <?php wp_dropdown_roles(); ?>
+                    </select>
+                </div>
+            </div>
+
             <input type="hidden" name="pw_hide_os" value="<?php echo $pw_hide_os; ?>"/>
             <input type="hidden" name="publish_order" value="<?php echo $pw_publish_order; ?>"/>
             <input type="hidden" name="order_item_name" value="<?php echo $pw_order_item_name; ?>"/>
@@ -3811,6 +3882,38 @@ if ($file_used == "sql_table") {
         </div>
 
     </form>
+    <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            $('select.pw_user_roles').select2({
+                placeholder: '<?php _e('Select roles to include (leave empty for all)', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?>',
+                allowClear: true, width: '100%', closeOnSelect: false
+            });
+            $('select.pw_user_roles_exclude').select2({
+                placeholder: '<?php _e('Select roles to exclude (leave empty for none)', __PW_REPORT_WCREPORT_TEXTDOMAIN__); ?>',
+                allowClear: true, width: '100%', closeOnSelect: false
+            });
+            function setDateRange(from, to) {
+                $('#pwr_from_date').datepicker('setDate', from);
+                $('#pwr_to_date').datepicker('setDate', to);
+            }
+            $('#pw_date_preset').on('change', function() {
+                var preset = $(this).val(), today = new Date(), from, to;
+                switch(preset) {
+                    case 'last7days':    to = new Date(); from = new Date(today.setDate(today.getDate()-7)); break;
+                    case 'last30days':   to = new Date(); from = new Date(today.setDate(today.getDate()-30)); break;
+                    case 'last90days':   to = new Date(); from = new Date(today.setDate(today.getDate()-90)); break;
+                    case 'thismonth':    from = new Date(today.getFullYear(), today.getMonth(), 1); to = new Date(); break;
+                    case 'lastmonth':    from = new Date(today.getFullYear(), today.getMonth()-1, 1); to = new Date(today.getFullYear(), today.getMonth(), 0); break;
+                    case 'thisquarter':  var q = Math.floor(today.getMonth()/3); from = new Date(today.getFullYear(), q*3, 1); to = new Date(); break;
+                    case 'lastquarter':  var q = Math.floor(today.getMonth()/3); if(q===0){from=new Date(today.getFullYear()-1,9,1);to=new Date(today.getFullYear()-1,11,31);}else{from=new Date(today.getFullYear(),(q-1)*3,1);to=new Date(today.getFullYear(),q*3,0);} break;
+                    case 'ytd':          from = new Date(today.getFullYear(), 0, 1); to = new Date(); break;
+                    case 'last12months': to = new Date(); from = new Date(today.setFullYear(today.getFullYear()-1)); break;
+                    case 'custom': return;
+                }
+                if (from && to) setDateRange(from, to);
+            });
+        });
+    </script>
     <?php
 }
 ?>
