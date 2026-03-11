@@ -739,6 +739,7 @@
 					case 'customer':
 						$table_column=array(
 							array('lable'=>esc_html__('Billing First Name',__PW_REPORT_WCREPORT_TEXTDOMAIN__),'status'=>'show'),
+							array('lable'=>esc_html__('Billing Company',__PW_REPORT_WCREPORT_TEXTDOMAIN__),'status'=>'show'),
 							array('lable'=>esc_html__('Billing Last Name',__PW_REPORT_WCREPORT_TEXTDOMAIN__),'status'=>'show'),
 							array('lable'=>esc_html__('Billing Email',__PW_REPORT_WCREPORT_TEXTDOMAIN__),'status'=>'show'),
 							array('lable'=>esc_html__('Order Count',__PW_REPORT_WCREPORT_TEXTDOMAIN__),'status'=>'show'),

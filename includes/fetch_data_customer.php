@@ -40,15 +40,16 @@ if($file_used=="sql_table")
 		SUM(pw_postmeta1.meta_value) AS 'total_amount'
 		,pw_postmeta2.meta_value AS 'billing_email'
 		,pw_postmeta3.meta_value AS 'billing_first_name'
+		,pw_postmeta5.meta_value AS 'billing_company'
 		,Count(pw_postmeta2.meta_value) AS 'order_count'
-		,pw_postmeta4.meta_value AS  customer_id";
+		,pw_postmeta4.meta_value AS customer_id";
 
     $sql_joins = "{$wpdb->prefix}posts as pw_posts
 		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta1 ON pw_postmeta1.post_id=pw_posts.ID
 		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta2 ON pw_postmeta2.post_id=pw_posts.ID
-		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta3 ON pw_postmeta3.post_id=pw_posts.ID";
-
-    $sql_joins .= " LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta4 ON pw_postmeta4.post_id=pw_posts.ID";
+		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta3 ON pw_postmeta3.post_id=pw_posts.ID
+		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta5 ON pw_postmeta5.post_id=pw_posts.ID
+		LEFT JOIN  {$wpdb->prefix}postmeta as pw_postmeta4 ON pw_postmeta4.post_id=pw_posts.ID";
 
     if(strlen($pw_id_order_status)>0 && $pw_id_order_status != "-1" && $pw_id_order_status != "no" && $pw_id_order_status != "all"){
         $pw_id_order_status_join= "
@@ -60,6 +61,7 @@ if($file_used=="sql_table")
 		AND pw_postmeta1.meta_key='_order_total'
 		AND pw_postmeta2.meta_key='_billing_email'
 		AND pw_postmeta3.meta_key='_billing_first_name'
+		AND pw_postmeta5.meta_key='_billing_company'
 		AND pw_postmeta4.meta_key='_customer_user'
 		";
 
@@ -113,6 +115,13 @@ if($file_used=="sql_table")
         if($this->table_cols[$index_cols++]['status']=='hide') $display_class='display:none';
         $datatable_value.=("<td style='".$display_class."'>");
         $datatable_value.= $items->billing_first_name;
+        $datatable_value.=("</td>");
+
+        //Billing Company
+        $display_class='';
+        if($this->table_cols[$index_cols++]['status']=='hide') $display_class='display:none';
+        $datatable_value.=("<td style='".$display_class."'>");
+        $datatable_value.= $items->billing_company;
         $datatable_value.=("</td>");
 
         //Billing Last Name
